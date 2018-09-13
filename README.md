@@ -14,7 +14,7 @@ The model starts learning something at 30k.
 Download [LJSpeech](https://keithito.com/LJ-Speech-Dataset/) provided by keithito. It contains 13100 short audio clips of a single speaker. The total lenght is approximately 20 hrs.
 
 * Set config.  
-Set the `meta_path` and `wav_dir` in `hyperparams.py` to paths of your downloaded LJSpeech's meta file and wav directory. 
+Set the **meta_path** and **wav_dir** in `hyperparams.py` to paths of your downloaded LJSpeech's meta file and wav directory. 
 
 * Train
 ```bash
