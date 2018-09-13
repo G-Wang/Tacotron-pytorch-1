@@ -51,4 +51,4 @@ The model starts learning something at 30k.
 2. (Tensorflow) acetylSv's  [implementation](https://github.com/acetylSv/GST-tacotron)
 3. (Pytorch)    soobinseo's [implementaition](https://github.com/soobinseo/Tacotron-pytorch)  
 
-Finally, I have to say this work is highly based on Kyubyong's work, so if you are a tensorflow user, you may want to see his work. Also, feel free to send pull requests!
+Finally, I have to say this work is highly based on Kyubyong's work, so if you are a tensorflow user, you may want to see his work. Also, feel free to give some feedbacks!
