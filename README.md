@@ -1,13 +1,6 @@
 # A Pytorch Implementation of Tacotron: End-to-end Text-to-speech Deep-Learning Model
 Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with pytorch.
 
-## Samples
-The sample texts is based on [Harvard Sentences](http://www.cs.columbia.edu/~hgs/audio/harvard.html). See the samples at `samples/` which are generated after training 200k.
-
-## Alignment
-The model starts learning something at 30k.
-![alignment](alignment.gif)
-
 ## Requirements
 * python3  
 * pytorch  
@@ -37,7 +30,14 @@ $ python main.py --train --cuda
 # You can change the evaluation texts in `hyperparams.py`
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
- 
+
+## Samples
+The sample texts is based on [Harvard Sentences](http://www.cs.columbia.edu/~hgs/audio/harvard.html). See the samples at `samples/` which are generated after training 200k.
+
+## Alignment
+The model starts learning something at 30k.
+![alignment](alignment.gif)
+
 
 ## Differences with the original Tacotron
 1. Data bucketing (Original Tacotron used loss mask)
