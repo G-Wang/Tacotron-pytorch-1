@@ -21,6 +21,15 @@ $ python main.py --train --cuda
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
 
+## What is different with the original Tacotron
+1. Data bucketing (because they used loss mask)
+2. Remove residual part in decoder_CBHG
+3. Batch size is set to 8
+
+
+## Data
+[LJSpeech](https://keithito.com/LJ-Speech-Dataset/) provided by keithito. It contains 13100 short audio clips of a single speaker. The total lenght is approximately 20 hrs.
+
 
 
 ## Refenrence
