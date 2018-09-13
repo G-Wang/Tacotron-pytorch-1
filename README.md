@@ -14,5 +14,5 @@ $ python main.py --train --cuda
 
 * Evaluation
 ```bash
-$ python main --eval --cuda --ckpt <ckpt_timestep.pth.tar>
+$ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
