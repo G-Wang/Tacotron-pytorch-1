@@ -1,4 +1,5 @@
 # A Pytorch Implementation of Tacotron: End-to-end Text-to-speech Deep-Learning Model
+Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with pytorch.
 
 ## Samples
 The sample texts is based on [Harvard Sentences](http://www.cs.columbia.edu/~hgs/audio/harvard.html). See the samples at `samples/` which are generated after training 200k.
