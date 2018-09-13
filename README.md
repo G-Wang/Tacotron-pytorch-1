@@ -30,7 +30,7 @@ $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
  
 
 ## Differences with the original Tacotron
-1. Data bucketing (because they used loss mask)
+1. Data bucketing (Tacotron used loss mask)
 2. Remove residual connection in decoder_CBHG
 3. Batch size is set to 8
 4. Gradient clipping
