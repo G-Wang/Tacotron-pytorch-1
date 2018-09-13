@@ -10,6 +10,12 @@ The model starts learning something at 30k.
 
 ## Usage
 
+* Data  
+Download [LJSpeech](https://keithito.com/LJ-Speech-Dataset/) provided by keithito. It contains 13100 short audio clips of a single speaker. The total lenght is approximately 20 hrs.
+
+* Set config.  
+Set the `meta_path` and `wav_dir` in `hyperparams.py` to paths of your downloaded LJSpeech's meta file and wav directory. 
+
 * Train
 ```bash
 # If you have pretrained model, add --ckpt <ckpt_path>
@@ -28,12 +34,6 @@ $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 2. Remove residual connection in decoder_CBHG
 3. Batch size is set to 8
 4. Gradient clipping
-
-
-
-## Data
-[LJSpeech](https://keithito.com/LJ-Speech-Dataset/) provided by keithito. It contains 13100 short audio clips of a single speaker. The total lenght is approximately 20 hrs.
-
 
 
 ## Refenrence
