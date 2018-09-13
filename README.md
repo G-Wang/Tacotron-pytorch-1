@@ -8,6 +8,15 @@ The sample texts is based on [Harvard Sentences](http://www.cs.columbia.edu/~hgs
 The model starts learning something at 30k.
 ![alignment](alignment.gif)
 
+## Requirements
+* python3  
+* pytorch  
+* librosa  
+* numpy  
+* pandas  
+* scipy  
+* matplotlib  
+
 
 ## Usage
 
