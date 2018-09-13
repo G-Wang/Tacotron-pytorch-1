@@ -17,10 +17,11 @@ $ python main.py --train --cuda
 ```
 
 * Evaluation  
-You can change the evaluation texts in `hyperparams.py`.
 ```bash
+# You can change the evaluation texts in `hyperparams.py`
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
+ 
 
 ## Differences with the original Tacotron
 1. Data bucketing (because they used loss mask)
