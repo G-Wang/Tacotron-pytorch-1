@@ -12,7 +12,7 @@ The model start learning something at 30k.
 
 * Train
 ```bash
-# If you have pretrain model, add --ckpt <ckpt_path>
+# If you have pretrained model, add --ckpt <ckpt_path>
 $ python main.py --train --cuda
 ```
 
