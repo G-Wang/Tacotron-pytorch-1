@@ -1,1 +1,1 @@
-Result wav file will be saved here.
+Result wav filew will be saved here.
