@@ -1,7 +1,8 @@
 # A-Pytorch-Implementation-of-Tacotron-End-to-end-Text-to-speech-Deep-Learning-Model
 
 ## Samples
-See the samples at *samples/* which are generated after training 200k.
+The sample texts is based on [Harvard Sentences](http://www.cs.columbia.edu/~hgs/audio/harvard.html).  
+See the samples at `samples/` which are generated after training 200k.
 
 
 ## Usage
@@ -16,3 +17,10 @@ $ python main.py --train --cuda
 ```bash
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
+
+
+
+## Refenrence
+1. (Tensorflow) Kyubyong's [implementatino](https://github.com/Kyubyong/tacotron)
+2. (Tensorflow) acetylSv's [implementation](https://github.com/acetylSv/GST-tacotron)
+3. (Pytorch)    soobinseo's [implementaition](https://github.com/soobinseo/Tacotron-pytorch)
