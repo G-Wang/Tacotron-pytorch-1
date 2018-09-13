@@ -33,6 +33,7 @@ $ python main.py --train --cuda
 * Evaluate 
 ```bash
 # You can change the evaluation texts in `hyperparams.py`
+# ckpt files are saved in 'tmp/ckpt/' in default
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
 
