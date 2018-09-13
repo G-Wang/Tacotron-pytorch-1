@@ -214,6 +214,6 @@ if __name__ == '__main__':
     parser.add_argument('--train', action='store_true', help='train mode')
     parser.add_argument('--eval', action='store_true', help='eval mode')
     parser.add_argument('--cuda', action='store_true', help='use gpu')
-    parser.add_argument('--ckpt', default=None, type=str, help='e.g., "ckpt/model_{}.pth.tar"')
+    parser.add_argument('--ckpt', default=None, type=str, help='e.g., "ckpt/ckpt_{}.pth.tar"')
     args = parser.parse_args()
     run(args)
