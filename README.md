@@ -1,5 +1,6 @@
 # A Pytorch Implementation of Tacotron: End-to-end Text-to-speech Deep-Learning Model
-Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with pytorch.
+Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with pytorch.  
+![tacotron](architecture.jpg)
 
 ## Requirements
 * python3  
