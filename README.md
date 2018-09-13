@@ -43,7 +43,7 @@ The model starts learning something at 30k.
 ![alignment](alignment.gif)
 
 
-## Differences with the original Tacotron
+## Differences from the original Tacotron
 1. Data bucketing (Original Tacotron used loss mask)
 2. Remove residual connection in decoder_CBHG
 3. Batch size is set to 8
