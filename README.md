@@ -21,7 +21,7 @@ $ python main.py --train --cuda
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
 
-## What is different with the original Tacotron
+## Differences with the original Tacotron
 1. Data bucketing (because they used loss mask)
 2. Remove residual part in decoder_CBHG
 3. Batch size is set to 8
@@ -37,4 +37,4 @@ $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 2. (Tensorflow) acetylSv's [implementation](https://github.com/acetylSv/GST-tacotron)
 3. (Pytorch)    soobinseo's [implementaition](https://github.com/soobinseo/Tacotron-pytorch)  
 
-Finally, I have to say this work is highly based on Kyubyong's work, so you are a tensorflower, you may want to see his work.
+Finally, I have to say this work is highly based on Kyubyong's work, so if you are a tensorflow user, you may want to see his work. Also, feel free to send pull requests!
