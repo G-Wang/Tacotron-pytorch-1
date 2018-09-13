@@ -4,6 +4,7 @@
 The sample texts is based on [Harvard Sentences](http://www.cs.columbia.edu/~hgs/audio/harvard.html). See the samples at `samples/` which are generated after training 200k.
 
 ## Alignment
+The model start learning something at 30k.
 ![alignment](alignment.gif)
 
 
