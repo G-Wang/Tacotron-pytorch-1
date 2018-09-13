@@ -27,6 +27,8 @@ $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 1. Data bucketing (because they used loss mask)
 2. Remove residual part in decoder_CBHG
 3. Batch size is set to 8
+4. Gradient clipping
+
 
 
 ## Data
