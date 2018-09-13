@@ -35,8 +35,8 @@ $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 
 
 ## Refenrence
-1. (Tensorflow) Kyubyong's [implementatino](https://github.com/Kyubyong/tacotron)
-2. (Tensorflow) acetylSv's [implementation](https://github.com/acetylSv/GST-tacotron)
+1. (Tensorflow) Kyubyong's  [implementation](https://github.com/Kyubyong/tacotron)
+2. (Tensorflow) acetylSv's  [implementation](https://github.com/acetylSv/GST-tacotron)
 3. (Pytorch)    soobinseo's [implementaition](https://github.com/soobinseo/Tacotron-pytorch)  
 
 Finally, I have to say this work is highly based on Kyubyong's work, so if you are a tensorflow user, you may want to see his work. Also, feel free to send pull requests!
