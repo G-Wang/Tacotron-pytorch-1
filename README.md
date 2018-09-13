@@ -16,7 +16,8 @@ The model start learning something at 30k.
 $ python main.py --train --cuda
 ```
 
-* Evaluation
+* Evaluation  
+You can change the evaluation texts in `hyperparams.py`.
 ```bash
 $ python main.py --eval --cuda --ckpt <ckpt_timestep.pth.tar>
 ```
