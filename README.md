@@ -3,11 +3,12 @@ Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with 
 ![tacotron](arch_fig.jpg)
 
 ## Requirements
+Download python and pytorch by youself.  
 * python==3.6.5
-* pytorch==0.4.1
-----------------
+* pytorch==0.4.1  
+
+You can use requirements.txt to download packages below.
 ```bash
-# You can use requirements.txt to download packages below.
 # I recommend you use virtualenv.
 $ pip install -r requirements.txt
 ```
