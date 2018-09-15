@@ -138,7 +138,7 @@ def run(args):
             sys.stdout.write('\n')
 
     if args.train:
-        end = time.time()
+        before_load = time.time()
         # Start training
         model.train()
         while True:
@@ -165,8 +165,8 @@ def run(args):
                 # Model prediction
                 decoder_input = torch.cat([GO_frame, mel[:, hps.reduction_factor::hps.reduction_factor, :]], dim=1)
 
-                load_time = time.time() - end
-                start = time.time()
+                load_time = time.time() - before_load
+                before_step = time.time()
 
                 _batch = model(text=txt, frames=decoder_input)
                 _mel = _batch['mel']
@@ -185,7 +185,7 @@ def run(args):
                 optimizer.step()
                 # Adjust learning rate
                 scheduler.step()
-                process_time = time.time() - start 
+                process_time = time.time() - before_step 
                 if step % hps.log_every_step == 0:
                     lr_curr = optimizer.param_groups[0]['lr']
                     log = '[{}-{}] loss: {:.3f}, grad: {:.3f}, lr: {:.3e}, time: {:.2f} + {:.2f} sec'.format(epoch, step, loss.item(), total_norm, lr_curr, load_time, process_time)
@@ -206,7 +206,7 @@ def run(args):
                     save_alignment(attn_sample, step, 'tmp/plots/attn_{}.png'.format(step))
                     save_spectrogram(mag_sample, 'tmp/plots/spectrogram_{}.png'.format(step))
                     save_wav(wav_sample, 'tmp/results/wav_{}.wav'.format(step))
-                end = time.time()
+                before_load = time.time()
                 step += 1
             epoch += 1
 
