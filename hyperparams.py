@@ -8,7 +8,6 @@
 class Hyperparams(object):
     # Test
     eval_texts = ['Welcome to National Taiwan University speech lab.',
-                  'Welcome to N.T.U. speech lab.',
                   'The birch canoe slid on the smooth planks.',
                   'Glue the sheet to the dark blue background.',
                   'It\'s easy to tell the depth of a well.', 
@@ -29,19 +28,19 @@ class Hyperparams(object):
                   'The soft cushion broke the man\'s fall.',
                   'The salt breeze came across from the sea.',
                   'The girl at the booth sold fifty bonds.'
-				 ]
+                 ]
 
     # Path
     ckpt_dir = 'checkpoint/'
-    meta_path = 'Data/LJSpeech-1.1/metadata.csv'
-    wav_dir = 'Data/LJSpeech-1.1/wavs'
+    meta_path = '/home/ttao/Datasets/LJSpeech/LJSpeech-1.1/metadata.csv'
+    wav_dir = '/home/ttao/Datasets/LJSpeech/LJSpeech-1.1/wavs'
 
     # Save
     save_model_every_step = 1000 
     save_result_every_step = 1000
 
     # Log
-    log_every_step = 1
+    log_every_step = 5
 
     # Dataset
     char_set = "PE abcdefghijklmnopqrstuvwxyz'.?"  # P for padding, E for eos
@@ -63,7 +62,7 @@ class Hyperparams(object):
     clip_norm = 5.0
 
     # Inference configuration
-    max_infer_step = 400 // reduction_factor
+    max_infer_step = 500 // reduction_factor
 
     # Signal processing
     sampling_rate = 22050

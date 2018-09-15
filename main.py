@@ -21,6 +21,7 @@ from torch.nn.utils.clip_grad import clip_grad_norm_
 from utils import save_alignment, save_spectrogram, mag2wav, save_wav, text_normalize, sent2idx
 
 numpy.warnings.filterwarnings('ignore')
+#torch.backends.cudnn.benchmark = True
 
 _to_save = ['model', 'optimizer', 'step', 'epoch']
 
@@ -142,8 +143,6 @@ def run(args):
         model.train()
         while True:
             for batch in loader:
-                load_time = time.time() - end
-                start = time.time()
                 # torch.LongTensor, (batch_size, seq_length)
                 txt = batch['text']
                 # torch.Tensor, (batch_size, max_time, hps.n_mels)
@@ -165,6 +164,10 @@ def run(args):
 
                 # Model prediction
                 decoder_input = torch.cat([GO_frame, mel[:, hps.reduction_factor::hps.reduction_factor, :]], dim=1)
+
+                load_time = time.time() - end
+                start = time.time()
+
                 _batch = model(text=txt, frames=decoder_input)
                 _mel = _batch['mel']
                 _mag = _batch['mag']
@@ -176,7 +179,6 @@ def run(args):
                 loss_mag = criterion(_mag, mag)
                 loss = loss_mel + loss_mag
                 loss.backward()
-
                 # Gradient clipping
                 total_norm = clip_grad_norm_(model.parameters(), max_norm=hps.clip_norm)
                 # Apply gradient
@@ -214,6 +216,6 @@ if __name__ == '__main__':
     parser.add_argument('--train', action='store_true', help='train mode')
     parser.add_argument('--eval', action='store_true', help='eval mode')
     parser.add_argument('--cuda', action='store_true', help='use gpu')
-    parser.add_argument('--ckpt', default=None, type=str, help='e.g., "ckpt/ckpt_{}.pth.tar"')
+    parser.add_argument('--ckpt', default=None, type=str, help='e.g., "ckpt/model_{}.pth.tar"')
     args = parser.parse_args()
     run(args)

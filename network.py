@@ -33,31 +33,35 @@ class Tacotron(nn.Module):
     def forward(self, text, frames):
         """
         Args:
-            text: a batch of index sequence with shape (batch_size, text_seq_lenth)
+            text: a batch of index sequence with shape (batch_size, seq_lenth)
             frames: 
                 if training: 
                     the input frames of decoder prenet. 
-                    Shape: (batch_size, frame_seq_length, hps.n_mels)
-                if testing : 
+                    Shape: (batch_size, frame_length, hps.n_mels)
+                else: 
                     a GO frame. Shape: (1, 1, hps.n_mels)
         Returns:
             The magnitude spectrogram with shape (batch_size, T, F)
         """
 
         text_embed = self.encoder(text)
-        mel_pred, a, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(frames[:, 0, :].unsqueeze(1), text_embed)
-        # Shape: (batch_size, 1, max_time_step)
-        attn = a.unsqueeze(1)
-        time_step = frames.size(1) if self.training else hps.max_infer_step
-        for t in range(1, time_step):
-            # If evaluation, use the last predicted mel
-            frame_input = frames[:, t, :] if self.training else mel_pred[:, -1, :]
-            # Shape: (batch_size, 1, hps.n_mels)
-            frame_input = frame_input.unsqueeze(1)
-            # Shape: (batch_size, r, hps.n_mels)
-            pred, a, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(frame_input, text_embed, state_attn, state_dec_1, state_dec_2) 
-            attn = torch.cat([attn, a.unsqueeze(1)], dim=1) 
-            mel_pred = torch.cat([mel_pred, pred], dim=1)
+        if self.training:
+            batch_size = text.size(0)
+            # Shape of mel_pred: (batch_size, frame_length * r, hps.n_mels) 
+            # Shape of attn:     (batch_size, frame_length, seq_length)
+            mel_pred, attn, _, _, _ = self.decoder_mel(frames, text_embed)
+        else:
+            mel_pred, attn, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(
+                    frames, text_embed)
+            for t in range(1, hps.max_infer_step):
+                # Shape: (batch_size, 1, hps.n_mels)
+                frame_input = mel_pred[:, -1, :].unsqueeze(1)
+                # Shape: (batch_size, r, hps.n_mels)
+                pred, a, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(
+                    frame_input, text_embed, state_attn, state_dec_1, state_dec_2) 
+                attn = torch.cat([attn, a], dim=1) 
+                mel_pred = torch.cat([mel_pred, pred], dim=1)
+        # Pass the predicted mel spectrogram to post-CBHG network
         mag_pred = self.decoder_mag(mel_pred)
         return {'mel': mel_pred, 'mag': mag_pred, 'attn': attn}
 
@@ -116,15 +120,16 @@ class Decoder_Mel(nn.Module):
             output_size=hps.n_mels,
             r=reduction_factor)
 
-    def forward(self, frame, memory, gru_hidden_attn=None, gru_hidden_dec_1=None, gru_hidden_dec_2=None):
+    def forward(self, frames, memory, gru_hidden_attn=None, gru_hidden_dec_1=None, gru_hidden_dec_2=None):
         """
         Args:
-            frame: a frame with shape (batch_size, 1, input_size).
+            frames: frames with shape (batch_size, frame_length, input_size).
             memory: the output of `Encoder` with shape (batch_size, seq_length, text_embed_size).
         Returns:
-            A tensor with shape (batch_size, reduction_factor, hps.n_mels)
+            out: A tensor with shape (batch_size, frame_length * reduction_factor, hps.n_mels)
+            a: A tensor with shape (batch_size, frame_length, seq_length)
         """
-        h = self.prenet(frame)
+        h = self.prenet(frames)
         h, a, state_attn = self.attnRNN(h, memory, gru_hidden_attn)
         out, state_dec_1, state_dec_2 = self.decRNN(h, gru_hidden_dec_1, gru_hidden_dec_2)
         return out, a, state_attn, state_dec_1, state_dec_2
@@ -145,9 +150,9 @@ class Decoder_Mag(nn.Module):
     def forward(self, x):
         """
         Args:
-            x: a tensor with shape (batch_size, audio_seq_length, input_size)
+            x: a tensor with shape (batch_size, frame_length, input_size)
         Returns:
-            A tensor with shape (batch_size, audio_seq_length, 1 + n_fft//2)
+            A tensor with shape (batch_size, frame_length, 1 + n_fft//2)
         """
         y, _ = self.CBHG(x)
         out = self.proj(y)

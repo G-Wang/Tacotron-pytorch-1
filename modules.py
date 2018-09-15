@@ -219,31 +219,49 @@ class Attention(nn.Module):
     def __init__(self, query_size, context_size, hidden_size=None):
         super(Attention, self).__init__()
         if hidden_size is None:
-            hidden_size = context_size
-        self.W_q = nn.Linear(query_size, hidden_size, bias=False)
-        self.W_c = nn.Linear(context_size, hidden_size, bias=False)
+            self.hidden_size = context_size
+        self.W_q = nn.Linear(query_size, self.hidden_size, bias=False)
+        self.W_c = nn.Linear(context_size, self.hidden_size, bias=False)
         self.v = nn.Parameter(torch.normal(mean=torch.zeros(
-            hidden_size), std=torch.ones(hidden_size)))
+            self.hidden_size), std=torch.ones(self.hidden_size)))
 
     def forward(self, query, context):
         """
         Args:
-            query: A tensor with shape (batch_size, 1, query_size)
+            query: A tensor with shape (batch_size, frame_length, query_size)
             context: A tensor with shape (batch_size, seq_length, context_size)
         Returns:
-            The alignment tensor with shape (batch, seq_length)
+            The alignment tensor with shape (batch, frame_length, seq_length)
         """
         batch_size = context.size(0)
         seq_len = context.size(1)
-        # Shape: (batch_size, seq_length, query_size)
-        query_tiled = query.repeat(1, seq_len, 1)
-        # Shape: (batch_size, seq_length, hidden_size)
-        info_matrix = torch.tanh(self.W_q(query_tiled) + self.W_c(context))
-        # Shape: (batch_size, hidden_size, 1)
-        v_tiled = self.v.unsqueeze(0).repeat(batch_size, 1).unsqueeze(2)  
-        # Shape: (batch_size, seq_length)
-        energy = torch.bmm(info_matrix, v_tiled).squeeze(2)  
-        alignment = F.softmax(energy, dim=1)
+        frame_len = query.size(1)
+        query_size = query.size(2)
+        context_size = context.size(2)
+        # Shape: (batch_size, frame_length, 1, query_size)
+        query_tiled = query.unsqueeze(2)
+        # Shape: (batch_size, frame_length, seq_length, query_size)
+        query_tiled = query_tiled.repeat(1, 1, seq_len, 1)
+        # Shape: (batch_size * frame_length * seq_length, query_size)
+        query_tiled = query_tiled.view(-1, query_size) 
+
+        # Shape: (batch_size, 1, seq_length, context_size)
+        context_tiled = context.unsqueeze(1)
+        # Shape: (batch_size, frame_length, seq_length, context_size)
+        context_tiled = context_tiled.repeat(1, frame_len, 1, 1)
+        # Shape: (batch_size * frame_length * seq_length, context_size)
+        context_tiled = context_tiled.view(-1, context_size)
+
+        # Shape: (batch_size * frame_length * seq_length, hidden_size)
+        info_matrix = torch.tanh(self.W_q(query_tiled) + self.W_c(context_tiled))
+        # Shape: (batch_size * frame_length * seq_length, hidden_size)
+        v_tiled = self.v.unsqueeze(0).repeat(batch_size * frame_len * seq_len, 1)
+        # Inner product
+        # Shape: (batch_size * frame_length * seq_length)
+        energy = torch.sum(v_tiled * info_matrix, dim=1)
+        # Shape: (batch_size, frame_length, seq_length)
+        energy = energy.view(batch_size, frame_len, seq_len)
+        alignment = F.softmax(energy, dim=2)
         return alignment
 
 
@@ -262,27 +280,33 @@ class AttentionRNN(nn.Module):
     def forward(self, x, memory, gru_hidden=None):
         """
         Args:
-            x: A tensor with shape (batch_size, 1, input_size)
+            x: A tensor with shape (batch_size, frame_length, input_size)
             memory: the output of `Encoder` with shape (batch_size, seq_length, text_embed_size).
         Returns:
-            out: the output of gru with shape (batch_size, 1, hidden_size + text_embed_size).
-            a: attention weight with shape (batch_size, seq_length).
+            out: the output of gru with shape (batch_size, frame_length, hidden_size + text_embed_size).
+            a: attention weight with shape (batch_size, frame_length, seq_length).
         """
-
+        
+        batch_size = x.size(0)
+        frame_len = x.size(1)
+        seq_len = memory.size(1)
+        
         self.gru.flatten_parameters()
-        # Shape: (batch_size, 1, hidden_size)
+        # Shape: (batch_size, frame_length, hidden_size)
         if gru_hidden is not None:
             h, state = self.gru(x, gru_hidden)
         else:
             h, state = self.gru(x)
-        # Shape: (batch_size, seq_length)
+        # Shape: (batch_size, frame_length, seq_length)
         a = self.attn(query=h, context=memory)
-        # Shape: (batch_size, seq_length, text_embed_size)
-        a_tile = a.unsqueeze(2).repeat(1, 1, self.text_embed_size)
-        # Shape: (batch_size, text_embed_size)
-        context = torch.sum(a_tile * memory, dim=1)
-        # Shape: (batch_size, 1, text_embed_size + hidden_size)
-        out = torch.cat([context.unsqueeze(1), h], dim=2)
+        # Shape: (batch_size, frame_length, seq_length, text_embed_size)
+        a_tiled = a.unsqueeze(3).repeat(1, 1, 1, self.text_embed_size)
+        # Shape: (batch_size, frame_length, seq_length, text_embed_size)
+        memory_tiled = memory.unsqueeze(1).repeat(1, frame_len, 1, 1)
+        # Shape: (batch_size, frame_length, text_embed_size)
+        context = torch.sum(a_tiled * memory_tiled, dim=2)
+        # Shape: (batch_size, frame_length, text_embed_size + hidden_size)
+        out = torch.cat([context, h], dim=2)
         return out, a, state
 
 
@@ -290,7 +314,7 @@ class DecoderRNN(nn.Module):
     """Decoder RNN in original Tacotron paper.
     """
 
-    def __init__(self, input_size, output_size, r=2):
+    def __init__(self, input_size, output_size, r=5):
         """
         Args:
             r: An int, reduction factor.
@@ -307,23 +331,29 @@ class DecoderRNN(nn.Module):
     def forward(self, x, gru_hidden_1=None, gru_hidden_2=None):
         """
         Args:
-            x: A tensor with shape (batch_size, seq_len=1, input_size)
+            x: A tensor with shape (batch_size, frame_length, input_size)
+        Returns:
+            out: A tensor with shape (batch_size, frame_length * r, output_size)
         """
-        # Shape: (batch_size, 1, input_size)
+
+        batch_size = x.size(0)
+        frame_len = x.size(1)
+        # Shape: (batch_size, frame_length, input_size)
         self.gru_1.flatten_parameters()
         if gru_hidden_1 is not None:
             dec_1, state_1 = self.gru_1(x, gru_hidden_1)
         else:
             dec_1, state_1 = self.gru_1(x)  
-        # Shape: (batch_size, 1, input_size)
+        # Shape: (batch_size, frame_length, input_size)
         self.gru_2.flatten_parameters()
         if gru_hidden_2 is not None:
             dec_2, state_2 = self.gru_2(dec_1 + x, gru_hidden_2)
         else:
             dec_2, state_2 = self.gru_2(dec_1 + x)
-        # Shape: (batch_size, 1, r*output_size)
+        # Shape: (batch_size, frame_length, r*output_size)
         out = self.fc(dec_1 + dec_2 + x)
-        out = out.squeeze(1).view(x.size(0), self.r, self.output_size)
+        # Shape: (batch_size, frame_length * r, output_size)
+        out = out.view(batch_size, frame_len * self.r, self.output_size)
         return out, state_1, state_2
 
 
