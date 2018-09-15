@@ -2,6 +2,10 @@
 Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with pytorch.  
 ![tacotron](arch_fig.jpg)
 
+## Updates
+2018/09/15: Fix RNN feeding bug. (I will push the new code later, it speeds up about 1.6 times.)
+
+
 ## Requirements
 Download python and pytorch by youself.  
 * python==3.6.5
