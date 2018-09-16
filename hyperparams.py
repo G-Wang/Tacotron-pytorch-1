@@ -31,7 +31,6 @@ class Hyperparams(object):
                  ]
 
     # Path
-    ckpt_dir = 'checkpoint/'
     meta_path = '/home/ttao/Datasets/LJSpeech/LJSpeech-1.1/metadata.csv'
     wav_dir = '/home/ttao/Datasets/LJSpeech/LJSpeech-1.1/wavs'
 
