@@ -61,7 +61,7 @@ The model starts learning something at 30k.
 2. Remove residual connection in decoder_CBHG
 3. Batch size is set to 8
 4. Gradient clipping
-5. Noam style learning rate decay (The mechanism that 'Attention is all you need' applies.)
+5. Noam style learning rate decay (The mechanism that [Attention is all you need](https://arxiv.org/abs/1706.03762) applies.)
 
 
 ## Refenrence
