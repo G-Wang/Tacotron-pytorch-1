@@ -7,7 +7,7 @@ Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with 
 
 
 ## Requirements
-Download python and pytorch by youself.  
+Download python and pytorch.  
 * python==3.6.5
 * pytorch==0.4.1  
 
@@ -61,7 +61,7 @@ The model starts learning something at 30k.
 2. Remove residual connection in decoder_CBHG
 3. Batch size is set to 8
 4. Gradient clipping
-5. Noam style learning rate decay
+5. Noam style learning rate decay (The mechanism that 'Attention is all you need' applies.)
 
 
 ## Refenrence
