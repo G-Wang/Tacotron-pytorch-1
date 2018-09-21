@@ -47,8 +47,8 @@ class Tacotron(nn.Module):
         text_embed = self.encoder(text)
         if self.training:
             batch_size = text.size(0)
-            # Shape of mel_pred: (batch_size, frame_length * r, hps.n_mels) 
-            # Shape of attn:     (batch_size, frame_length, seq_length)
+            # Shape of mel_pred: (batch_size, frame_length, hps.n_mels) 
+            # Shape of attn:     (batch_size, frame_length // r, seq_length)
             mel_pred, attn, _, _, _ = self.decoder_mel(frames, text_embed)
         else:
             mel_pred, attn, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(
@@ -123,7 +123,7 @@ class Decoder_Mel(nn.Module):
     def forward(self, frames, memory, gru_hidden_attn=None, gru_hidden_dec_1=None, gru_hidden_dec_2=None):
         """
         Args:
-            frames: frames with shape (batch_size, frame_length, input_size).
+            frames: frames with shape (batch_size, frame_length // r, input_size).
             memory: the output of `Encoder` with shape (batch_size, seq_length, text_embed_size).
         Returns:
             out: A tensor with shape (batch_size, frame_length * reduction_factor, hps.n_mels)
