@@ -228,10 +228,10 @@ class Attention(nn.Module):
     def forward(self, query, context):
         """
         Args:
-            query: A tensor with shape (batch_size, frame_length, query_size)
+            query: A tensor with shape (batch_size, frame_length // r, query_size)
             context: A tensor with shape (batch_size, seq_length, context_size)
         Returns:
-            The alignment tensor with shape (batch, frame_length, seq_length)
+            The alignment tensor with shape (batch, frame_length // r, seq_length)
         """
         batch_size = context.size(0)
         seq_len = context.size(1)
@@ -280,11 +280,11 @@ class AttentionRNN(nn.Module):
     def forward(self, x, memory, gru_hidden=None):
         """
         Args:
-            x: A tensor with shape (batch_size, frame_length, input_size)
+            x: A tensor with shape (batch_size, frame_length // r, input_size)
             memory: the output of `Encoder` with shape (batch_size, seq_length, text_embed_size).
         Returns:
-            out: the output of gru with shape (batch_size, frame_length, hidden_size + text_embed_size).
-            a: attention weight with shape (batch_size, frame_length, seq_length).
+            out: the output of gru with shape (batch_size, frame_length // r, hidden_size + text_embed_size).
+            a: attention weight with shape (batch_size, frame_length // r, seq_length).
         """
         
         batch_size = x.size(0)
@@ -331,9 +331,9 @@ class DecoderRNN(nn.Module):
     def forward(self, x, gru_hidden_1=None, gru_hidden_2=None):
         """
         Args:
-            x: A tensor with shape (batch_size, frame_length, input_size)
+            x: A tensor with shape (batch_size, frame_length // r , input_size)
         Returns:
-            out: A tensor with shape (batch_size, frame_length * r, output_size)
+            out: A tensor with shape (batch_size, frame_length, output_size)
         """
 
         batch_size = x.size(0)
