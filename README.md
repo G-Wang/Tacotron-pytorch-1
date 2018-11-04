@@ -3,7 +3,8 @@ Implement google's [Tacotron](https://arxiv.org/abs/1703.10135) TTS system with 
 ![tacotron](arch_fig.jpg)
 
 ## Updates
-2018/09/15: Fix RNN feeding bug. 
+2018/09/15: Fix RNN feeding bug.
+2018/11/04: Add attention mask and loss mask.
 
 
 ## Requirements
