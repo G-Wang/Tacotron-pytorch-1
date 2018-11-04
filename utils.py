@@ -13,9 +13,9 @@ from hyperparams import Hyperparams as hps
 
 
 #### Audio ####
-def load_audio(audio_file):
-    y, sr = librosa.load(audio_file, sr=hps.sampling_rate)
-    return y
+def load_audio(audio_file, sr):
+    y, sr = librosa.load(audio_file, sr)
+    return y, sr
 
 
 def get_spectrogram(audio):
@@ -105,17 +105,18 @@ def _griffin_lim(mag, n_fft, hop_length, win_length):
     y = np.real(X_t)
     return y
 
+
 #### Text ####
 def text_normalize(text):
     text = ''.join(char for char in unicodedata.normalize('NFD', text) if unicodedata.category(char) != 'Mn')  # Strip accents
     text = text.lower()
-    text = re.sub("[^{}]".format(hps.char_set), " ", text)
+    text = re.sub("[^{}]".format(hps.vocab), " ", text)
     text = re.sub("[ ]+", " ", text)
     return text
 
 
 def char2idx(char):
-    return hps.char_set.find(char)
+    return hps.vocab.find(char)
 
 
 def sent2idx(sent):
@@ -125,13 +126,14 @@ def sent2idx(sent):
 def save_spectrogram(spectrogram, path, dpi=500, format='png'):
     """Save figure of `spectrogram` to `path'
     Args:
-        spectrogram: A numpy 2d array of shape (time, freq). 
+        spectrogram: A numpy 2d array of shape (time, freq).
         path: the path to save.
     """
     plt.gcf().clear()  # Clear current previous figure
+    cmap = plt.get_cmap('jet')
     t = hps.frame_len + np.arange(spectrogram.shape[0]) * hps.frame_hop
     f = np.arange(spectrogram.shape[1]) * hps.sampling_rate / hps.n_fft
-    plt.pcolormesh(t, f, spectrogram.T)
+    plt.pcolormesh(t, f, spectrogram.T, cmap=cmap)
     plt.xlabel('Time (sec)')
     plt.ylabel('Frequency (Hz)')
     plt.savefig(path, dpi=dpi, format=format)

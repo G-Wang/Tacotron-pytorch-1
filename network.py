@@ -5,11 +5,12 @@
 #       Group modules to form networks.
 #
 # -----------------------
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from hyperparams import Hyperparams as hps
-from modules import CharEmbedding, Prenet, Encoder_CBHG, Decoder_CBHG, AttentionRNN, DecoderRNN, Attention
+from modules import binaryMask, CharEmbedding, Prenet, Encoder_CBHG, Decoder_CBHG, AttentionRNN, DecoderRNN, Attention
 
 
 class Tacotron(nn.Module):
@@ -19,7 +20,7 @@ class Tacotron(nn.Module):
     def __init__(self):
         super(Tacotron, self).__init__()
         self.encoder = Encoder(
-            vocab_size=len(hps.char_set),
+            vocab_size=len(hps.vocab),
             embed_size=hps.embed_size)
         self.decoder_mel = Decoder_Mel(
             input_size=hps.n_mels,
@@ -30,39 +31,50 @@ class Tacotron(nn.Module):
             input_size=hps.n_mels,
             hidden_size=hps.embed_size // 2)
 
-    def forward(self, text, frames):
+    def forward(self, text, frames, text_length, frame_length=None):
         """
         Args:
             text: a batch of index sequence with shape (batch_size, seq_lenth)
-            frames: 
-                if training: 
-                    the input frames of decoder prenet. 
+            frames:
+                if training:
+                    the input frames of decoder prenet.
                     Shape: (batch_size, frame_length, hps.n_mels)
-                else: 
+                else:
                     a GO frame. Shape: (1, 1, hps.n_mels)
         Returns:
             The magnitude spectrogram with shape (batch_size, T, F)
         """
 
-        text_embed = self.encoder(text)
+        text_length = text_length.cpu().numpy().astype(np.int32)
+        if frame_length is not None:
+            frame_length = frame_length.cpu().numpy().astype(np.int32)
+
+        text_embed = self.encoder(text, text_length)
         if self.training:
             batch_size = text.size(0)
-            # Shape of mel_pred: (batch_size, frame_length, hps.n_mels) 
+            # Shape of mel_pred: (batch_size, frame_length, hps.n_mels)
             # Shape of attn:     (batch_size, frame_length // r, seq_length)
-            mel_pred, attn, _, _, _ = self.decoder_mel(frames, text_embed)
+            mel_pred, attn, _, _, _ = self.decoder_mel(frames, text_embed, text_length, frame_length=frame_length, mask=True)
+            # Pass the predicted mel spectrogram to post-CBHG network
+            mag_pred = self.decoder_mag(mel_pred, frame_length=frame_length, mask=True)
         else:
             mel_pred, attn, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(
-                    frames, text_embed)
+                    frames, text_embed, text_length)
             for t in range(1, hps.max_infer_step):
                 # Shape: (batch_size, 1, hps.n_mels)
                 frame_input = mel_pred[:, -1, :].unsqueeze(1)
                 # Shape: (batch_size, r, hps.n_mels)
                 pred, a, state_attn, state_dec_1, state_dec_2 = self.decoder_mel(
-                    frame_input, text_embed, state_attn, state_dec_1, state_dec_2) 
-                attn = torch.cat([attn, a], dim=1) 
+                    frame_input, 
+                    text_embed, 
+                    text_length, 
+                    gru_hidden_attn=state_attn, 
+                    gru_hidden_dec_1=state_dec_1, 
+                    gru_hidden_dec_2=state_dec_2)
+                attn = torch.cat([attn, a], dim=1)
                 mel_pred = torch.cat([mel_pred, pred], dim=1)
-        # Pass the predicted mel spectrogram to post-CBHG network
-        mag_pred = self.decoder_mag(mel_pred)
+            # Pass the predicted mel spectrogram to post-CBHG network
+            mag_pred = self.decoder_mag(mel_pred)
         return {'mel': mel_pred, 'mag': mag_pred, 'attn': attn}
 
 
@@ -83,7 +95,7 @@ class Encoder(nn.Module):
             input_size=embed_size // 2,
             hidden_size=embed_size // 2)
 
-    def forward(self, x):
+    def forward(self, x, text_length):
         """
         Args:
             x: index sequence with shape (batch_size, seq_length).
@@ -92,7 +104,11 @@ class Encoder(nn.Module):
         """
         y = self.embed(x)
         y = self.prenet(y)
+        m = binaryMask(y, text_length)
+        y = m * y
         out, _ = self.CBHG(y)
+        m = binaryMask(out, text_length)
+        out = m * out
         return out
 
 
@@ -112,15 +128,12 @@ class Decoder_Mel(nn.Module):
             input_size=hidden_size // 2,
             hidden_size=hidden_size,
             text_embed_size=text_embed_size)
-        self.attn = Attention(
-            query_size=hidden_size,
-            context_size=text_embed_size)
         self.decRNN = DecoderRNN(
             input_size=hidden_size + text_embed_size,
             output_size=hps.n_mels,
             r=reduction_factor)
 
-    def forward(self, frames, memory, gru_hidden_attn=None, gru_hidden_dec_1=None, gru_hidden_dec_2=None):
+    def forward(self, frames, memory, text_length, frame_length=None, gru_hidden_attn=None, gru_hidden_dec_1=None, gru_hidden_dec_2=None, mask=False):
         """
         Args:
             frames: frames with shape (batch_size, frame_length // r, input_size).
@@ -130,8 +143,11 @@ class Decoder_Mel(nn.Module):
             a: A tensor with shape (batch_size, frame_length, seq_length)
         """
         h = self.prenet(frames)
-        h, a, state_attn = self.attnRNN(h, memory, gru_hidden_attn)
+        h, a, state_attn = self.attnRNN(h, memory, text_length, gru_hidden_attn)
         out, state_dec_1, state_dec_2 = self.decRNN(h, gru_hidden_dec_1, gru_hidden_dec_2)
+        if mask:
+            m = binaryMask(out, frame_length)
+            out = m * out
         return out, a, state_attn, state_dec_1, state_dec_2
 
 
@@ -147,7 +163,7 @@ class Decoder_Mag(nn.Module):
             hidden_size=hidden_size)
         self.proj = nn.Linear(2 * hidden_size, 1 + hps.n_fft // 2)
 
-    def forward(self, x):
+    def forward(self, x, frame_length=None, mask=False):
         """
         Args:
             x: a tensor with shape (batch_size, frame_length, input_size)
@@ -156,4 +172,7 @@ class Decoder_Mag(nn.Module):
         """
         y, _ = self.CBHG(x)
         out = self.proj(y)
+        if mask:
+            m = binaryMask(out, frame_length)
+            out = m * out
         return out

@@ -35,14 +35,14 @@ class Hyperparams(object):
     wav_dir = '/home/ttao/Datasets/LJSpeech/LJSpeech-1.1/wavs'
 
     # Save
-    save_model_every_step = 1000 
+    save_model_every_step = 10000 
     save_result_every_step = 1000
 
     # Log
     log_every_step = 5
 
     # Dataset
-    char_set = "PE abcdefghijklmnopqrstuvwxyz'.?"  # P for padding, E for eos
+    vocab = "PE abcdefghijklmnopqrstuvwxyz'.,?"  # P for padding, E for eos
     text_min_length = 0
     text_max_length = 200
     bucket = True
@@ -58,7 +58,7 @@ class Hyperparams(object):
     num_highway = 4
     K_encoder = 16
     K_decoder = 8
-    clip_norm = 5.0
+    clip_norm = 1.0
 
     # Inference configuration
     max_infer_step = 500 // reduction_factor

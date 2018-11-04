@@ -6,10 +6,30 @@
 #
 # -----------------------
 from collections import OrderedDict
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from hyperparams import Hyperparams as hps
+
+
+def binaryMask(x, length, mask_dim=1):
+    # x should be of shape (batch_size, seq_length, feat_dim)
+    size = list(x.size())
+    bz, seq_length, feat_dim = size[0], size[1], size[2]
+    m = []
+    for b in range(bz):
+        mb = []
+        true_len = length[b]
+        for l in range(seq_length):
+            if l < true_len:
+                mb.append(np.ones((feat_dim, )))
+            else:
+                mb.append(np.zeros((feat_dim, )))
+        m.append(mb)
+    m = np.asarray(m)
+    m = torch.from_numpy(m).to(x.device).type(x.dtype)
+    return m
 
 
 class CharEmbedding(nn.Module):
@@ -24,7 +44,7 @@ class CharEmbedding(nn.Module):
         """
         super(CharEmbedding, self).__init__()
         self.net = nn.Embedding(input_size, embed_size,
-                                padding_idx=hps.char_set.find('P'))
+                                padding_idx=hps.vocab.find('P'))
 
     def forward(self, x):
         """
@@ -33,7 +53,8 @@ class CharEmbedding(nn.Module):
         returns:
             The embedding of `x`.
         """
-        return self.net(x)
+        embed = self.net(x)
+        return embed
 
 
 class Prenet(nn.Module):
@@ -100,7 +121,7 @@ class Encoder_CBHG(nn.Module):
                           hidden_size=hidden_size,
                           bidirectional=True,
                           batch_first=True)
-    
+
     def forward(self, x, gru_hidden=None):
         """
         Args:
@@ -225,7 +246,7 @@ class Attention(nn.Module):
         self.v = nn.Parameter(torch.normal(mean=torch.zeros(
             self.hidden_size), std=torch.ones(self.hidden_size)))
 
-    def forward(self, query, context):
+    def forward(self, query, memory, memory_mask):
         """
         Args:
             query: A tensor with shape (batch_size, frame_length // r, query_size)
@@ -233,27 +254,27 @@ class Attention(nn.Module):
         Returns:
             The alignment tensor with shape (batch, frame_length // r, seq_length)
         """
-        batch_size = context.size(0)
-        seq_len = context.size(1)
+        batch_size = memory.size(0)
+        seq_len = memory.size(1)
         frame_len = query.size(1)
         query_size = query.size(2)
-        context_size = context.size(2)
+        memory_size = memory.size(2)
         # Shape: (batch_size, frame_length, 1, query_size)
         query_tiled = query.unsqueeze(2)
         # Shape: (batch_size, frame_length, seq_length, query_size)
         query_tiled = query_tiled.repeat(1, 1, seq_len, 1)
         # Shape: (batch_size * frame_length * seq_length, query_size)
-        query_tiled = query_tiled.view(-1, query_size) 
+        query_tiled = query_tiled.view(-1, query_size)
 
         # Shape: (batch_size, 1, seq_length, context_size)
-        context_tiled = context.unsqueeze(1)
+        memory_tiled = memory.unsqueeze(1)
         # Shape: (batch_size, frame_length, seq_length, context_size)
-        context_tiled = context_tiled.repeat(1, frame_len, 1, 1)
+        memory_tiled = memory_tiled.repeat(1, frame_len, 1, 1)
         # Shape: (batch_size * frame_length * seq_length, context_size)
-        context_tiled = context_tiled.view(-1, context_size)
+        memory_tiled = memory_tiled.view(-1, memory_size)
 
         # Shape: (batch_size * frame_length * seq_length, hidden_size)
-        info_matrix = torch.tanh(self.W_q(query_tiled) + self.W_c(context_tiled))
+        info_matrix = torch.tanh(self.W_q(query_tiled) + self.W_c(memory_tiled))
         # Shape: (batch_size * frame_length * seq_length, hidden_size)
         v_tiled = self.v.unsqueeze(0).repeat(batch_size * frame_len * seq_len, 1)
         # Inner product
@@ -261,7 +282,9 @@ class Attention(nn.Module):
         energy = torch.sum(v_tiled * info_matrix, dim=1)
         # Shape: (batch_size, frame_length, seq_length)
         energy = energy.view(batch_size, frame_len, seq_len)
-        alignment = F.softmax(energy, dim=2)
+        # Avoid to attend on pad, support FP16
+        energy = energy.float().masked_fill(memory_mask, float('-inf')).type_as(energy)
+        alignment = F.softmax(energy.float(), dim=2).type_as(energy)
         return alignment
 
 
@@ -274,10 +297,10 @@ class AttentionRNN(nn.Module):
         self.gru = nn.GRU(input_size=input_size,
                           hidden_size=hidden_size, batch_first=True)
         self.text_embed_size = text_embed_size
-        self.attn = Attention(query_size=hidden_size, 
+        self.attn = Attention(query_size=hidden_size,
                               context_size=text_embed_size)
 
-    def forward(self, x, memory, gru_hidden=None):
+    def forward(self, x, memory, text_length, gru_hidden=None):
         """
         Args:
             x: A tensor with shape (batch_size, frame_length // r, input_size)
@@ -286,19 +309,21 @@ class AttentionRNN(nn.Module):
             out: the output of gru with shape (batch_size, frame_length // r, hidden_size + text_embed_size).
             a: attention weight with shape (batch_size, frame_length // r, seq_length).
         """
-        
+
         batch_size = x.size(0)
         frame_len = x.size(1)
         seq_len = memory.size(1)
-        
+
         self.gru.flatten_parameters()
         # Shape: (batch_size, frame_length, hidden_size)
         if gru_hidden is not None:
             h, state = self.gru(x, gru_hidden)
         else:
             h, state = self.gru(x)
+
+        attnMask = AttentionRNN.makeAttnMask(memory, text_length, frame_len)
         # Shape: (batch_size, frame_length, seq_length)
-        a = self.attn(query=h, context=memory)
+        a = self.attn(query=h, memory=memory, memory_mask=attnMask)
         # Shape: (batch_size, frame_length, seq_length, text_embed_size)
         a_tiled = a.unsqueeze(3).repeat(1, 1, 1, self.text_embed_size)
         # Shape: (batch_size, frame_length, seq_length, text_embed_size)
@@ -308,6 +333,26 @@ class AttentionRNN(nn.Module):
         # Shape: (batch_size, frame_length, text_embed_size + hidden_size)
         out = torch.cat([context, h], dim=2)
         return out, a, state
+
+    @staticmethod
+    def makeAttnMask(memory, text_length, frame_len):
+        bz = memory.size(0)
+        seq_len = memory.size(1)
+        m = []
+        for b in range(bz):
+            mb = []
+            true_len = text_length[b]
+            for l in range(seq_len):
+                if l < true_len:
+                    mb.append(np.zeros((frame_len, ), dtype=np.int32))
+                else:
+                    mb.append(np.ones((frame_len, ), dtype=np.int32))
+            m.append(mb)
+        # Shape: (batch_size, frame_length, seq_length)
+        m = np.swapaxes(np.asarray(m), 1, 2)
+        m = torch.from_numpy(m).type(torch.ByteTensor).to(memory.device)
+        return m
+
 
 
 class DecoderRNN(nn.Module):
@@ -343,7 +388,7 @@ class DecoderRNN(nn.Module):
         if gru_hidden_1 is not None:
             dec_1, state_1 = self.gru_1(x, gru_hidden_1)
         else:
-            dec_1, state_1 = self.gru_1(x)  
+            dec_1, state_1 = self.gru_1(x)
         # Shape: (batch_size, frame_length, input_size)
         self.gru_2.flatten_parameters()
         if gru_hidden_2 is not None:
@@ -392,3 +437,5 @@ class MaxPool1d_SAME(nn.Module):
 
     def forward(self, x):
         return _adjust_conv_dim(self.net(x), self.kernel_size)
+
+
